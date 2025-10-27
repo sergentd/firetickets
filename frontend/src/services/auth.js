@@ -28,6 +28,9 @@ export const loginWithEmail = async (email, password) => {
       password,
     );
     console.log("🔐 AUTH: ✓ Sign in successful", userCredential.user.email);
+    console.log("🔐 AUTH: ✓ User ID (UID):", userCredential.user.uid);
+    console.log("🔐 AUTH: Expected userId in tickets:", "g8EsL5xBoYR1p1uWASqzLcLQMRq2");
+    console.log("🔐 AUTH: UIDs match:", userCredential.user.uid === "g8EsL5xBoYR1p1uWASqzLcLQMRq2" ? "✓ YES" : "✗ NO - THIS IS THE PROBLEM!");
     return userCredential.user;
   } catch (error) {
     console.error("🔐 AUTH: ✗ Sign in failed");
