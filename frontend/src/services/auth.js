@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
+import logger from "@/utils/logger";
 
 const auth = getAuth(app);
 
@@ -18,25 +19,25 @@ const auth = getAuth(app);
  */
 export const loginWithEmail = async (email, password) => {
   try {
-    console.log("🔐 AUTH: Attempting sign in...");
-    console.log("🔐 AUTH: Email:", email);
-    console.log("🔐 AUTH: Auth instance:", auth ? "✓ Ready" : "✗ Not initialized");
+    logger.log("🔐 AUTH: Attempting sign in...");
+    logger.log("🔐 AUTH: Email:", email);
+    logger.log("🔐 AUTH: Auth instance:", auth ? "✓ Ready" : "✗ Not initialized");
 
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
       password,
     );
-    console.log("🔐 AUTH: ✓ Sign in successful", userCredential.user.email);
-    console.log("🔐 AUTH: ✓ User ID (UID):", userCredential.user.uid);
-    console.log("🔐 AUTH: Expected userId in tickets:", "g8EsL5xBoYR1p1uWASqzLcLQMRq2");
-    console.log("🔐 AUTH: UIDs match:", userCredential.user.uid === "g8EsL5xBoYR1p1uWASqzLcLQMRq2" ? "✓ YES" : "✗ NO - THIS IS THE PROBLEM!");
+    logger.log("🔐 AUTH: ✓ Sign in successful", userCredential.user.email);
+    logger.log("🔐 AUTH: ✓ User ID (UID):", userCredential.user.uid);
+    logger.log("🔐 AUTH: Expected userId in tickets:", "g8EsL5xBoYR1p1uWASqzLcLQMRq2");
+    logger.log("🔐 AUTH: UIDs match:", userCredential.user.uid === "g8EsL5xBoYR1p1uWASqzLcLQMRq2" ? "✓ YES" : "✗ NO - THIS IS THE PROBLEM!");
     return userCredential.user;
   } catch (error) {
-    console.error("🔐 AUTH: ✗ Sign in failed");
-    console.error("🔐 AUTH: Error code:", error.code);
-    console.error("🔐 AUTH: Error message:", error.message);
-    console.error("🔐 AUTH: Full error:", error);
+    logger.error("🔐 AUTH: ✗ Sign in failed");
+    logger.error("🔐 AUTH: Error code:", error.code);
+    logger.error("🔐 AUTH: Error message:", error.message);
+    logger.error("🔐 AUTH: Full error:", error);
     throw error;
   }
 };
@@ -46,11 +47,11 @@ export const loginWithEmail = async (email, password) => {
  */
 export const logout = async () => {
   try {
-    console.log("🔐 AUTH: Signing out...");
+    logger.log("🔐 AUTH: Signing out...");
     await signOut(auth);
-    console.log("🔐 AUTH: Sign out successful");
+    logger.log("🔐 AUTH: Sign out successful");
   } catch (error) {
-    console.error("🔐 AUTH: Sign out failed:", error);
+    logger.error("🔐 AUTH: Sign out failed:", error);
     throw error;
   }
 };
@@ -68,7 +69,7 @@ export const getCurrentUser = () => {
  */
 export const onAuthChange = (callback) => {
   return onAuthStateChanged(auth, (user) => {
-    console.log("🔐 AUTH: Auth state changed:", user ? user.email : "No user");
+    logger.log("🔐 AUTH: Auth state changed:", user ? user.email : "No user");
     callback(user);
   });
 };

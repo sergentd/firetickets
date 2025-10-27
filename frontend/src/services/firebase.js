@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import logger from "@/utils/logger";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,8 +12,8 @@ const firebaseConfig = {
 };
 
 // Debug: Log configuration status (without exposing sensitive data)
-console.log("🔥 FIREBASE: Initializing Firebase...");
-console.log("🔥 FIREBASE: Config loaded:", {
+logger.log("🔥 FIREBASE: Initializing Firebase...");
+logger.log("🔥 FIREBASE: Config loaded:", {
   hasApiKey: !!firebaseConfig.apiKey,
   authDomain: firebaseConfig.authDomain,
   projectId: firebaseConfig.projectId,
@@ -25,16 +26,16 @@ const missingConfig = Object.entries(firebaseConfig)
   .map(([key]) => key);
 
 if (missingConfig.length > 0) {
-  console.error("🔥 FIREBASE: Missing configuration values:", missingConfig);
-  console.error("🔥 FIREBASE: Check your .env.local file");
+  logger.error("🔥 FIREBASE: Missing configuration values:", missingConfig);
+  logger.error("🔥 FIREBASE: Check your .env.local file");
 }
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-console.log("🔥 FIREBASE: App initialized successfully");
+logger.log("🔥 FIREBASE: App initialized successfully");
 
 // Initialize Firestore
 const db = getFirestore(app);
-console.log("🔥 FIRESTORE: Database initialized successfully");
+logger.log("🔥 FIRESTORE: Database initialized successfully");
 
 export { app, db };

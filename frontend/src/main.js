@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import logger from "@/utils/logger";
 import router from "./router";
 import App from "./App.vue";
 import "./style.css";
@@ -22,23 +23,21 @@ app.use(router);
 if (import.meta.env.DEV) {
   window.__db = db;
   window.__migration = MigrationService;
-  console.log("💾 IndexedDB available at window.__db");
-  console.log("🔄 Migration service available at window.__migration");
 }
 
 // Migrate data from localStorage before mounting
-console.log("🔄 Checking for data migration...");
+logger.log("🔄 Checking for data migration...");
 
 MigrationService.migrateFromLocalStorage()
   .then((result) => {
-    console.log("📊 Migration result:", result);
+    logger.log("📊 Migration result:", result);
 
     if (result.success && result.affectedItems > 0) {
-      console.log(
+      logger.log(
         `✅ Migrated ${result.affectedItems} items from localStorage to IndexedDB`,
       );
     } else if (result.success) {
-      console.log(
+      logger.log(
         "ℹ️ No migration needed (already migrated or no legacy data)",
       );
     }
@@ -49,10 +48,10 @@ MigrationService.migrateFromLocalStorage()
     // Initialize search indexer
     initializeSearchIndexer();
 
-    console.log("✅ App mounted successfully");
+    logger.log("✅ App mounted successfully");
   })
   .catch((error) => {
-    console.error("❌ Migration error:", error);
+    logger.error("❌ Migration error:", error);
 
     // Mount app anyway (graceful degradation)
     app.mount("#app");
