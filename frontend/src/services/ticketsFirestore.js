@@ -1,4 +1,5 @@
 import { db } from "./firebase";
+import { auth } from "./auth";
 import {
   collection,
   doc,
@@ -8,6 +9,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
   Timestamp,
@@ -29,8 +31,19 @@ const getTicketsCollection = () => collection(db, COLLECTION_NAME);
  */
 export const loadTickets = async () => {
   try {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
     console.log("🔥 FIRESTORE: Loading tickets from Firebase Firestore...");
-    const q = query(getTicketsCollection(), orderBy("createdAt", "desc"));
+    console.log("🔥 FIRESTORE: Filtering by userId:", userId);
+
+    const q = query(
+      getTicketsCollection(),
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
+    );
     const snapshot = await getDocs(q);
     console.log(
       `🔥 FIRESTORE: Loaded ${snapshot.docs.length} tickets from Firebase`,
@@ -60,9 +73,19 @@ export const loadTickets = async () => {
  * Returns: Unsubscribe function
  */
 export const subscribeToTickets = (callback) => {
-  const q = query(getTicketsCollection(), orderBy("createdAt", "desc"));
-  console.log(
-    "🔥 FIRESTORE: Real-time listener activated - listening for changes...",
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    console.error("🔥 FIRESTORE: Cannot subscribe - user not authenticated");
+    return () => {}; // Return empty unsubscribe function
+  }
+
+  console.log("🔥 FIRESTORE: Real-time listener activated - listening for changes...");
+  console.log("🔥 FIRESTORE: Filtering by userId:", userId);
+
+  const q = query(
+    getTicketsCollection(),
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc")
   );
 
   return onSnapshot(
@@ -107,18 +130,24 @@ export const subscribeToTickets = (callback) => {
  */
 export const createTicket = async (ticketData) => {
   try {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
     console.log(
       "🔥 FIRESTORE: Creating ticket in Firebase...",
       ticketData.title,
     );
     const docRef = await addDoc(getTicketsCollection(), {
       ...ticketData,
+      userId: userId,
       createdAt: serverTimestamp(), // Server timestamp (accurate)
       updatedAt: serverTimestamp(),
     });
     console.log(`🔥 FIRESTORE: Ticket created with ID: ${docRef.id}`);
 
-    return { id: docRef.id, ...ticketData };
+    return { id: docRef.id, ...ticketData, userId };
   } catch (error) {
     console.error("Error creating ticket:", error);
     throw error;
