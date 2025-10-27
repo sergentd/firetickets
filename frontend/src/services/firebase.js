@@ -14,16 +14,10 @@ const firebaseConfig = {
 console.log("🔥 FIREBASE: Initializing Firebase...");
 console.log("🔥 FIREBASE: Config loaded:", {
   hasApiKey: !!firebaseConfig.apiKey,
-  apiKeyFirst20: firebaseConfig.apiKey?.substring(0, 20) + "...",
   authDomain: firebaseConfig.authDomain,
   projectId: firebaseConfig.projectId,
   hasAppId: !!firebaseConfig.appId,
-  appIdFirst20: firebaseConfig.appId?.substring(0, 20) + "...",
 });
-
-// DEBUGGING: Show full API key (REMOVE AFTER DEBUGGING)
-console.warn("🔥 FIREBASE DEBUG: Full API Key:", firebaseConfig.apiKey);
-console.warn("🔥 FIREBASE DEBUG: Full App ID:", firebaseConfig.appId);
 
 // Check if all required config values are present
 const missingConfig = Object.entries(firebaseConfig)
