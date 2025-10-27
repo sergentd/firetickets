@@ -18,16 +18,22 @@ const auth = getAuth(app);
  */
 export const loginWithEmail = async (email, password) => {
   try {
-    console.log("🔐 AUTH: Signing in...");
+    console.log("🔐 AUTH: Attempting sign in...");
+    console.log("🔐 AUTH: Email:", email);
+    console.log("🔐 AUTH: Auth instance:", auth ? "✓ Ready" : "✗ Not initialized");
+
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
       password,
     );
-    console.log("🔐 AUTH: Sign in successful", userCredential.user.email);
+    console.log("🔐 AUTH: ✓ Sign in successful", userCredential.user.email);
     return userCredential.user;
   } catch (error) {
-    console.error("🔐 AUTH: Sign in failed:", error.code);
+    console.error("🔐 AUTH: ✗ Sign in failed");
+    console.error("🔐 AUTH: Error code:", error.code);
+    console.error("🔐 AUTH: Error message:", error.message);
+    console.error("🔐 AUTH: Full error:", error);
     throw error;
   }
 };

@@ -8,5 +8,11 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  build: {
+    sourcemap: true
+  },
+  server: {
+    sourcemap: true
   }
 })
