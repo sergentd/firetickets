@@ -669,6 +669,10 @@ body::before {
   box-shadow: var(--shadow-card);
 }
 
+.glass-card-rounded {
+  border-radius: var(--radius-sm); /* 4px - much smaller rounded corners */
+}
+
 .glass-button {
   background: var(--glass-bg-light);
   backdrop-filter: blur(var(--blur-md));

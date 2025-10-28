@@ -3,14 +3,6 @@
     class="ticket-card hover-lift relative overflow-hidden cursor-pointer"
     @click="$emit('edit', ticket.id)"
   >
-    <!-- Priority Corner Band -->
-    <div
-      :class="[
-        'absolute top-0 left-0 w-12 h-12 transform -translate-x-6 -translate-y-6 rotate-45',
-        priorityColors[ticket.priority],
-      ]"
-    ></div>
-
     <!-- Header -->
     <div class="flex items-start justify-between mb-3">
       <div class="flex-1">
@@ -64,35 +56,9 @@
     </div>
 
     <!-- Description -->
-    <p class="text-sm text-gray-300 mb-4 line-clamp-2">
+    <p class="text-xs text-gray-300 mb-3 line-clamp-3">
       {{ ticket.description }}
     </p>
-
-    <!-- Ticket Type Badge -->
-    <div class="mb-3">
-      <span
-        :class="[
-          'inline-flex items-center px-2 py-1 text-xs font-medium rounded-full',
-          typeColors[ticket.type],
-        ]"
-      >
-        <IconSystem
-          v-if="ticket.type === 'callback'"
-          name="phone"
-          size="xs"
-          class="mr-1"
-          variant="mono"
-        />
-        <IconSystem
-          v-else
-          name="document"
-          size="xs"
-          class="mr-1"
-          variant="mono"
-        />
-        {{ typeLabels[ticket.type] }}
-      </span>
-    </div>
 
     <!-- Dates Info -->
     <div class="flex justify-between items-center text-xs text-gray-400 mb-4">
@@ -205,13 +171,6 @@ defineEmits(["edit", "delete", "status-change"]);
 const showMenu = ref(false);
 
 // Color mappings using existing color scheme
-const priorityColors = {
-  low: "bg-gray-500",
-  medium: "bg-yellow-500",
-  high: "bg-orange-500",
-  urgent: "bg-red-500",
-};
-
 const priorityBadgeColors = {
   low: "bg-gray-600/30 text-gray-300",
   medium: "bg-yellow-600/30 text-yellow-300",
@@ -238,16 +197,6 @@ const statusLabels = {
   "in-progress": "En cours",
   waiting: "En attente",
   completed: "Terminé",
-};
-
-const typeColors = {
-  callback: "bg-blue-600/30 text-blue-300",
-  task: "bg-gray-600/30 text-gray-300",
-};
-
-const typeLabels = {
-  callback: "Rappel client",
-  task: "Tâche",
 };
 
 // Computed
@@ -316,6 +265,13 @@ onUnmounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
