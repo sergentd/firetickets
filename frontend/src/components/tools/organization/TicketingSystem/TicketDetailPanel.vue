@@ -480,20 +480,16 @@ const handleSubmit = async () => {
     return;
   }
 
-  const getCurrentTimestamp = () => {
-    const now = new Date();
-    const offset = now.getTimezoneOffset() * 60000;
-    const localTime = new Date(now.getTime() - offset);
-    return localTime.toISOString();
-  };
-
   // Track changes for activity log
   const changes = [];
-  if (props.ticket.title !== form.value.title) {
-    changes.push(`Titre modifié: "${props.ticket.title}" → "${form.value.title}"`);
+  if (props.ticket.title !== form.value.title.trim()) {
+    changes.push(`Titre modifié: "${props.ticket.title}" → "${form.value.title.trim()}"`);
   }
-  if (props.ticket.customer !== form.value.customer) {
-    changes.push(`Client modifié: "${props.ticket.customer}" → "${form.value.customer}"`);
+  if (props.ticket.customer !== form.value.customer.trim()) {
+    changes.push(`Client modifié: "${props.ticket.customer}" → "${form.value.customer.trim()}"`);
+  }
+  if (props.ticket.description !== form.value.description.trim()) {
+    changes.push(`Description modifiée`);
   }
   if (props.ticket.priority !== form.value.priority) {
     changes.push(`Priorité modifiée: ${priorityLabels[props.ticket.priority]} → ${priorityLabels[form.value.priority]}`);
@@ -504,6 +500,26 @@ const handleSubmit = async () => {
   if (props.ticket.type !== form.value.type) {
     changes.push(`Type modifié: ${getTypeLabel(props.ticket.type)} → ${getTypeLabel(form.value.type)}`);
   }
+  if (props.ticket.dueDate !== form.value.dueDate) {
+    if (!props.ticket.dueDate && form.value.dueDate) {
+      changes.push(`Date d'échéance ajoutée: ${form.value.dueDate}`);
+    } else if (props.ticket.dueDate && !form.value.dueDate) {
+      changes.push(`Date d'échéance supprimée`);
+    } else {
+      changes.push(`Date d'échéance modifiée: ${props.ticket.dueDate} → ${form.value.dueDate}`);
+    }
+  }
+
+  // Prepare the update object with only the fields that should be updated
+  const updates = {
+    title: form.value.title.trim(),
+    customer: form.value.customer.trim(),
+    description: form.value.description.trim(),
+    priority: form.value.priority,
+    type: form.value.type,
+    status: form.value.status,
+    dueDate: form.value.dueDate || null,
+  };
 
   // Add activity for each change
   if (changes.length > 0) {
@@ -517,16 +533,10 @@ const handleSubmit = async () => {
     }
   }
 
+  // Emit save with just the ID and updates (not the full ticket with arrays)
   emit("save", {
-    ...props.ticket,
-    title: form.value.title.trim(),
-    customer: form.value.customer.trim(),
-    description: form.value.description.trim(),
-    priority: form.value.priority,
-    type: form.value.type,
-    status: form.value.status,
-    dueDate: form.value.dueDate || null,
-    updatedAt: getCurrentTimestamp(),
+    id: props.ticket.id,
+    ...updates,
   });
 
   emit("close");
