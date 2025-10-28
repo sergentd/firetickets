@@ -334,7 +334,8 @@ const statusLabels = {
 
 // Methods
 const formatTicketId = (id) => {
-  return id.toUpperCase().slice(0, 23);
+  if (!id) return "N/A";
+  return String(id).toUpperCase().slice(0, 23);
 };
 
 const getRelativeTime = (dateString) => {

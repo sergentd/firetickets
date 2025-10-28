@@ -1,7 +1,7 @@
 <template>
   <div
     :class="[
-      'glass-card rounded-2xl p-6 transition-default',
+      'glass-card rounded-sm p-6 transition-default',
       variant === 'white' ? 'glass-card-white hover-lift' : '',
       className,
     ]"
