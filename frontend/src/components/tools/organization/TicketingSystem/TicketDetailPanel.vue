@@ -240,9 +240,12 @@
           <p class="empty-text">Aucune activité</p>
         </div>
         <div v-else class="activity-list">
-          <div v-for="activity in sortedActivities" :key="activity.id" class="activity-item">
-            <div class="activity-icon">
-              <IconSystem :name="getActivityIcon(activity.type)" size="sm" />
+          <div v-for="(activity, index) in sortedActivities" :key="activity.id" class="activity-item">
+            <div class="activity-timeline">
+              <div class="activity-icon-wrapper">
+                <IconSystem :name="getActivityIcon(activity.type)" size="sm" />
+              </div>
+              <div v-if="index < sortedActivities.length - 1" class="activity-line"></div>
             </div>
             <div class="activity-content">
               <p class="activity-description">{{ activity.description }}</p>
@@ -683,10 +686,11 @@ onUnmounted(() => {
 
 .tab-label {
   font-weight: 500;
+  font-size: var(--text-xs)
 }
 
 .tab-count {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-tertiary);
 }
@@ -881,19 +885,57 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .activity-item {
   display: flex;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: var(--space-4);
+  position: relative;
 }
 
-.activity-icon {
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.activity-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--electric-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--electric-blue);
-  margin-top: 2px;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.activity-line {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(
+    to bottom,
+    var(--electric-blue) 0%,
+    rgba(0, 212, 255, 0.3) 100%
+  );
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+  min-height: 40px;
+}
+
+.activity-content {
+  flex: 1;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-5);
 }
 
 .activity-description {
   font-size: var(--text-sm);
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  line-height: 1.4;
 }
 
 .activity-meta {
