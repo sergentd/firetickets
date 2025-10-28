@@ -3,6 +3,9 @@
     <!-- Global Search Modal -->
     <GlobalSearch v-if="isAuthenticated" ref="globalSearch" />
 
+    <!-- Toast Notifications -->
+    <Toast />
+
     <!-- Global Header (only show when authenticated) -->
     <AppHeader
       v-if="isAuthenticated"
@@ -78,6 +81,7 @@ import { onAuthChange } from "@/services/auth";
 import AppHeader from "@/components/ui/AppHeader.vue";
 import AppFooter from "@/components/ui/AppFooter.vue";
 import GlobalSearch from "@/components/search/GlobalSearch.vue";
+import Toast from "@/components/ui/Toast.vue";
 
 // Store
 const catalogStore = useCatalogStore();

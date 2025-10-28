@@ -346,7 +346,10 @@ import IconSystem from "@/components/ui/IconSystem.vue";
 import { addComment, addActivity, addAttachment, removeAttachment as removeAttachmentFromFirestore } from "@/services/ticketsFirestore";
 import { uploadAttachment, deleteAttachment } from "@/services/storage";
 import { getCurrentUser } from "@/services/auth";
+import { useToast } from "@/composables/useToast";
 import logger from "@/utils/logger";
+
+const toast = useToast();
 
 const props = defineProps({
   ticket: {
@@ -560,9 +563,10 @@ const handleSubmitComment = async () => {
     await addActivity(props.ticket.id, "comment_added", `Commentaire ajouté par ${userEmail}`);
     newCommentText.value = "";
     logger.log("✅ Comment added successfully");
+    toast.success("Commentaire ajouté avec succès");
   } catch (error) {
     logger.error("❌ Failed to add comment:", error);
-    alert("Erreur lors de l'ajout du commentaire");
+    toast.error("Erreur lors de l'ajout du commentaire");
   } finally {
     isSubmittingComment.value = false;
   }
@@ -599,6 +603,8 @@ const uploadFiles = async (files) => {
         uploadProgress.value[file.name] = progress;
       });
 
+      logger.log(`📎 Attachment object:`, attachment);
+
       // Add attachment to Firestore ticket
       await addAttachment(props.ticket.id, attachment);
 
@@ -606,11 +612,16 @@ const uploadFiles = async (files) => {
       await addActivity(props.ticket.id, "attachment_added", `Document ajouté: ${file.name}`);
 
       logger.log(`✅ ${file.name} uploaded successfully`);
+      logger.log(`📋 Current attachments count:`, props.ticket.attachments?.length || 0);
+
+      // Show success toast
+      toast.success(`${file.name} ajouté avec succès`);
+
       delete uploadProgress.value[file.name];
     }
   } catch (error) {
     logger.error("❌ Failed to upload files:", error);
-    alert("Erreur lors de l'upload des fichiers");
+    toast.error("Erreur lors de l'upload des fichiers");
   } finally {
     isUploading.value = false;
   }
@@ -620,6 +631,9 @@ const handleRemoveAttachment = async (attachment) => {
   if (!confirm(`Supprimer "${attachment.name}" ?`)) {
     return;
   }
+
+  logger.log(`🗑️ Removing attachment:`, attachment);
+  logger.log(`📋 Attachments before delete:`, props.ticket.attachments?.length || 0);
 
   try {
     // Delete from Firebase Storage (only if we have a valid storagePath)
@@ -639,9 +653,13 @@ const handleRemoveAttachment = async (attachment) => {
     await addActivity(props.ticket.id, "attachment_removed", `Document supprimé: ${attachment.name}`);
 
     logger.log(`✅ ${attachment.name} removed successfully`);
+    logger.log(`📋 Attachments after delete:`, props.ticket.attachments?.length || 0);
+
+    // Show success toast
+    toast.success(`${attachment.name} supprimé avec succès`);
   } catch (error) {
     logger.error("❌ Failed to remove attachment:", error);
-    alert("Erreur lors de la suppression du fichier");
+    toast.error("Erreur lors de la suppression du fichier");
   }
 };
 
@@ -705,12 +723,13 @@ const getFileIcon = (fileName, fileType) => {
   }
 
   // Fallback to extension
-  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
-  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi'];
-  const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'm4a'];
-  const docExts = ['doc', 'docx', 'txt', 'rtf', 'odt'];
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'];
+  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
+  const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'];
+  const docExts = ['doc', 'docx', 'txt', 'rtf', 'odt', 'md'];
   const sheetExts = ['xls', 'xlsx', 'csv', 'ods'];
-  const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
+  const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2'];
+  const codeExts = ['js', 'ts', 'jsx', 'tsx', 'vue', 'html', 'css', 'scss', 'sass', 'less', 'json', 'xml', 'yml', 'yaml', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'cs', 'go', 'rs', 'swift', 'kt', 'sh', 'bash', 'sql'];
 
   if (imageExts.includes(extension)) return 'image';
   if (videoExts.includes(extension)) return 'video';
@@ -719,7 +738,7 @@ const getFileIcon = (fileName, fileType) => {
   if (docExts.includes(extension)) return 'file-text';
   if (sheetExts.includes(extension)) return 'table';
   if (archiveExts.includes(extension)) return 'archive';
-  if (extension === 'code' || ['js', 'ts', 'jsx', 'tsx', 'vue', 'html', 'css', 'json'].includes(extension)) return 'code';
+  if (codeExts.includes(extension)) return 'code';
 
   return 'paperclip';
 };
@@ -741,7 +760,7 @@ const previewAttachment = (attachment) => {
 // Populate form when ticket changes
 watch(
   () => props.ticket,
-  (newTicket) => {
+  (newTicket, oldTicket) => {
     if (newTicket) {
       form.value.title = newTicket.title || "";
       form.value.customer = newTicket.customer || "";
@@ -750,9 +769,30 @@ watch(
       form.value.type = normalizeType(newTicket.type || "task");
       form.value.status = newTicket.status || "todo";
       form.value.dueDate = newTicket.dueDate || "";
+
+      // Debug logging
+      if (oldTicket && newTicket.id === oldTicket.id) {
+        const oldAttCount = oldTicket.attachments?.length || 0;
+        const newAttCount = newTicket.attachments?.length || 0;
+        if (oldAttCount !== newAttCount) {
+          logger.log(`🔄 Ticket attachments updated: ${oldAttCount} → ${newAttCount}`);
+        }
+      }
     }
   },
   { immediate: true, flush: "post" }
+);
+
+// Watch attachments specifically
+watch(
+  () => props.ticket.attachments,
+  (newAttachments, oldAttachments) => {
+    logger.log(`👁️ Attachments watcher triggered`, {
+      old: oldAttachments?.length || 0,
+      new: newAttachments?.length || 0
+    });
+  },
+  { deep: true }
 );
 
 // Keyboard shortcut

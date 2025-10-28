@@ -276,9 +276,17 @@ export const createMockTicket = (ticketData) => {
 export const updateMockTicket = (id, updates) => {
   const index = tickets.findIndex((t) => t.id === id);
   if (index !== -1) {
+    // Create new ticket object to trigger reactivity
+    // Important: Don't spread arrays from updates, keep the existing ones
+    const { attachments, comments, activities, ...otherUpdates } = updates;
+
     tickets[index] = {
       ...tickets[index],
-      ...updates,
+      ...otherUpdates,
+      // Keep original arrays if not explicitly provided in updates
+      attachments: attachments !== undefined ? attachments : tickets[index].attachments,
+      comments: comments !== undefined ? comments : tickets[index].comments,
+      activities: activities !== undefined ? activities : tickets[index].activities,
       updatedAt: new Date().toISOString(),
     };
 
@@ -320,9 +328,12 @@ export const addMockComment = (ticketId, commentText) => {
       createdAt: new Date().toISOString(),
     };
 
-    tickets[index].comments = tickets[index].comments || [];
-    tickets[index].comments.push(newComment);
-    tickets[index].updatedAt = new Date().toISOString();
+    // Create new ticket object to trigger reactivity
+    tickets[index] = {
+      ...tickets[index],
+      comments: [...(tickets[index].comments || []), newComment],
+      updatedAt: new Date().toISOString(),
+    };
 
     // Notify all subscribers of the change
     notifySubscribers();
@@ -342,8 +353,11 @@ export const addMockActivity = (ticketId, activityType, description) => {
       timestamp: new Date().toISOString(),
     };
 
-    tickets[index].activities = tickets[index].activities || [];
-    tickets[index].activities.push(newActivity);
+    // Create new ticket object to trigger reactivity
+    tickets[index] = {
+      ...tickets[index],
+      activities: [...(tickets[index].activities || []), newActivity],
+    };
 
     // Notify all subscribers of the change
     notifySubscribers();
@@ -356,9 +370,12 @@ export const addMockActivity = (ticketId, activityType, description) => {
 export const addMockAttachment = (ticketId, attachment) => {
   const index = tickets.findIndex((t) => t.id === ticketId);
   if (index !== -1) {
-    tickets[index].attachments = tickets[index].attachments || [];
-    tickets[index].attachments.push(attachment);
-    tickets[index].updatedAt = new Date().toISOString();
+    // Create new ticket object to trigger reactivity
+    tickets[index] = {
+      ...tickets[index],
+      attachments: [...(tickets[index].attachments || []), attachment],
+      updatedAt: new Date().toISOString(),
+    };
 
     // Notify all subscribers of the change
     notifySubscribers();
@@ -371,10 +388,14 @@ export const addMockAttachment = (ticketId, attachment) => {
 export const removeMockAttachment = (ticketId, attachmentId) => {
   const index = tickets.findIndex((t) => t.id === ticketId);
   if (index !== -1) {
-    tickets[index].attachments = (tickets[index].attachments || []).filter(
-      att => att.id !== attachmentId
-    );
-    tickets[index].updatedAt = new Date().toISOString();
+    // Create new ticket object to trigger reactivity
+    tickets[index] = {
+      ...tickets[index],
+      attachments: (tickets[index].attachments || []).filter(
+        att => att.id !== attachmentId
+      ),
+      updatedAt: new Date().toISOString(),
+    };
 
     // Notify all subscribers of the change
     notifySubscribers();
