@@ -104,8 +104,11 @@
               v-model="form.type"
               class="w-full px-4 py-3 bg-glass-bg border border-border-primary rounded-lg text-white focus:ring-2 focus:ring-electric-blue focus:border-electric-blue"
             >
-              <option value="task">Tâche générale</option>
-              <option value="callback">Rappel client</option>
+              <option value="task">Tâche</option>
+              <option value="email">Email</option>
+              <option value="call">Appel</option>
+              <option value="meeting">Réunion</option>
+              <option value="request">Demande</option>
             </select>
           </div>
         </div>

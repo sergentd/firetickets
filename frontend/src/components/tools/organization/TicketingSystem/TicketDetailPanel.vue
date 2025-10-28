@@ -10,7 +10,7 @@
             {{ priorityLabels[ticket.priority] }}
           </span>
           <span class="badge badge-type">
-            {{ typeLabels[ticket.type] }}
+            {{ getTypeLabel(ticket.type) }}
           </span>
           <span :class="['badge', `badge-status-${ticket.status}`]">
             {{ statusLabels[ticket.status] }}
@@ -144,10 +144,11 @@
             <div class="form-group">
               <label class="form-label">Type</label>
               <select v-model="form.type" class="form-select">
-                <option value="call">Appel</option>
-                <option value="email">Email</option>
-                <option value="meeting">Réunion</option>
                 <option value="task">Tâche</option>
+                <option value="email">Email</option>
+                <option value="call">Appel</option>
+                <option value="meeting">Réunion</option>
+                <option value="request">Demande</option>
               </select>
             </div>
           </div>
@@ -173,6 +174,40 @@
 
       <!-- Attachments Tab -->
       <div v-if="activeTab === 'attachments'" class="tab-content">
+        <!-- Drag & Drop Upload Zone -->
+        <div
+          :class="['upload-zone', { 'upload-zone-dragging': isDragging, 'upload-zone-uploading': isUploading }]"
+          @drop="handleFileDrop"
+          @dragover="handleDragOver"
+          @dragleave="handleDragLeave"
+        >
+          <input
+            type="file"
+            id="file-upload"
+            class="file-input"
+            multiple
+            @change="handleFileSelect"
+          />
+          <label for="file-upload" class="upload-label">
+            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span v-if="isUploading" class="upload-text">Upload en cours...</span>
+            <span v-else-if="isDragging" class="upload-text">Déposez vos fichiers ici</span>
+            <span v-else class="upload-text">Glissez-déposez vos fichiers ou <span class="upload-link">cliquez ici</span></span>
+          </label>
+          <div v-if="Object.keys(uploadProgress).length > 0" class="upload-progress-container">
+            <div v-for="(progress, fileName) in uploadProgress" :key="fileName" class="upload-progress-item">
+              <span class="upload-progress-name">{{ fileName }}</span>
+              <div class="upload-progress-bar">
+                <div class="upload-progress-fill" :style="{ width: progress + '%' }"></div>
+              </div>
+              <span class="upload-progress-percent">{{ Math.round(progress) }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attachments List -->
         <div v-if="attachments.length === 0" class="empty-state">
           <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -207,6 +242,15 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </a>
+              <button
+                @click="handleRemoveAttachment(attachment)"
+                class="attachment-action-btn attachment-delete-btn"
+                title="Supprimer"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -214,6 +258,35 @@
 
       <!-- Comments Tab -->
       <div v-if="activeTab === 'comments'" class="tab-content">
+        <!-- Comment Input -->
+        <div class="comment-input-container">
+          <textarea
+            v-model="newCommentText"
+            class="comment-input"
+            placeholder="Ajouter un commentaire..."
+            rows="3"
+            @keydown.ctrl.enter="handleSubmitComment"
+            @keydown.meta.enter="handleSubmitComment"
+          ></textarea>
+          <div class="comment-input-footer">
+            <span class="comment-hint">Ctrl+Entrée pour envoyer</span>
+            <button
+              @click="handleSubmitComment"
+              :disabled="!newCommentText.trim() || isSubmittingComment"
+              class="btn-submit-comment"
+            >
+              <svg v-if="isSubmittingComment" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+              <span>{{ isSubmittingComment ? 'Envoi...' : 'Envoyer' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Comments List -->
         <div v-if="comments.length === 0" class="empty-state">
           <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -267,6 +340,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import IconSystem from "@/components/ui/IconSystem.vue";
+import { addComment, addActivity, addAttachment, removeAttachment as removeAttachmentFromFirestore } from "@/services/ticketsFirestore";
+import { uploadAttachment, deleteAttachment } from "@/services/storage";
+import { getCurrentUser } from "@/services/auth";
+import logger from "@/utils/logger";
 
 const props = defineProps({
   ticket: {
@@ -301,6 +378,15 @@ const tabs = computed(() => [
 
 const activeTab = ref("details");
 
+// Comment input state
+const newCommentText = ref("");
+const isSubmittingComment = ref(false);
+
+// File upload state
+const isDragging = ref(false);
+const isUploading = ref(false);
+const uploadProgress = ref({});
+
 // Form
 const form = ref({
   title: "",
@@ -321,10 +407,26 @@ const priorityLabels = {
 };
 
 const typeLabels = {
-  call: "Appel",
-  email: "Email",
-  meeting: "Réunion",
   task: "Tâche",
+  email: "Email",
+  call: "Appel",
+  meeting: "Réunion",
+  request: "Demande",
+  callback: "Appel", // Backward compatibility
+};
+
+// Helper to get type label with fallback
+const getTypeLabel = (type) => {
+  return typeLabels[type] || type || "Non défini";
+};
+
+// Helper to normalize type value for form dropdown
+const normalizeType = (type) => {
+  // Convert old "callback" to "call"
+  if (type === "callback") return "call";
+  // Ensure the type is valid, default to "task" if not
+  const validTypes = ["task", "email", "call", "meeting", "request"];
+  return validTypes.includes(type) ? type : "task";
 };
 
 const statusLabels = {
@@ -373,7 +475,7 @@ const formatFileSize = (bytes) => {
   return (bytes / 1048576).toFixed(1) + ' MB';
 };
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!form.value.title.trim() || !form.value.customer.trim()) {
     return;
   }
@@ -384,6 +486,36 @@ const handleSubmit = () => {
     const localTime = new Date(now.getTime() - offset);
     return localTime.toISOString();
   };
+
+  // Track changes for activity log
+  const changes = [];
+  if (props.ticket.title !== form.value.title) {
+    changes.push(`Titre modifié: "${props.ticket.title}" → "${form.value.title}"`);
+  }
+  if (props.ticket.customer !== form.value.customer) {
+    changes.push(`Client modifié: "${props.ticket.customer}" → "${form.value.customer}"`);
+  }
+  if (props.ticket.priority !== form.value.priority) {
+    changes.push(`Priorité modifiée: ${priorityLabels[props.ticket.priority]} → ${priorityLabels[form.value.priority]}`);
+  }
+  if (props.ticket.status !== form.value.status) {
+    changes.push(`Statut modifié: ${statusLabels[props.ticket.status]} → ${statusLabels[form.value.status]}`);
+  }
+  if (props.ticket.type !== form.value.type) {
+    changes.push(`Type modifié: ${getTypeLabel(props.ticket.type)} → ${getTypeLabel(form.value.type)}`);
+  }
+
+  // Add activity for each change
+  if (changes.length > 0) {
+    try {
+      for (const change of changes) {
+        await addActivity(props.ticket.id, "ticket_updated", change);
+      }
+      logger.log("✅ Activities logged for ticket update");
+    } catch (error) {
+      logger.error("❌ Failed to log activities:", error);
+    }
+  }
 
   emit("save", {
     ...props.ticket,
@@ -398,6 +530,111 @@ const handleSubmit = () => {
   });
 
   emit("close");
+};
+
+// Comment methods
+const handleSubmitComment = async () => {
+  if (!newCommentText.value.trim() || isSubmittingComment.value) {
+    return;
+  }
+
+  isSubmittingComment.value = true;
+  try {
+    const currentUser = getCurrentUser();
+    const userEmail = currentUser?.email || "Utilisateur";
+
+    await addComment(props.ticket.id, newCommentText.value.trim());
+    await addActivity(props.ticket.id, "comment_added", `Commentaire ajouté par ${userEmail}`);
+    newCommentText.value = "";
+    logger.log("✅ Comment added successfully");
+  } catch (error) {
+    logger.error("❌ Failed to add comment:", error);
+    alert("Erreur lors de l'ajout du commentaire");
+  } finally {
+    isSubmittingComment.value = false;
+  }
+};
+
+// File upload methods
+const handleFileDrop = async (event) => {
+  event.preventDefault();
+  isDragging.value = false;
+
+  const files = Array.from(event.dataTransfer.files);
+  if (files.length === 0) return;
+
+  await uploadFiles(files);
+};
+
+const handleFileSelect = async (event) => {
+  const files = Array.from(event.target.files);
+  if (files.length === 0) return;
+
+  await uploadFiles(files);
+  event.target.value = ""; // Reset input
+};
+
+const uploadFiles = async (files) => {
+  isUploading.value = true;
+
+  try {
+    for (const file of files) {
+      logger.log(`📤 Uploading ${file.name}...`);
+
+      // Upload to Firebase Storage
+      const attachment = await uploadAttachment(file, props.ticket.id, (progress) => {
+        uploadProgress.value[file.name] = progress;
+      });
+
+      // Add attachment to Firestore ticket
+      await addAttachment(props.ticket.id, attachment);
+
+      // Log activity
+      await addActivity(props.ticket.id, "attachment_added", `Document ajouté: ${file.name}`);
+
+      logger.log(`✅ ${file.name} uploaded successfully`);
+      delete uploadProgress.value[file.name];
+    }
+  } catch (error) {
+    logger.error("❌ Failed to upload files:", error);
+    alert("Erreur lors de l'upload des fichiers");
+  } finally {
+    isUploading.value = false;
+  }
+};
+
+const handleRemoveAttachment = async (attachment) => {
+  if (!confirm(`Supprimer "${attachment.name}" ?`)) {
+    return;
+  }
+
+  try {
+    // Delete from Firebase Storage
+    if (attachment.storagePath) {
+      await deleteAttachment(attachment.storagePath);
+    }
+
+    // Remove from Firestore ticket
+    await removeAttachmentFromFirestore(props.ticket.id, attachment.id);
+
+    // Log activity
+    await addActivity(props.ticket.id, "attachment_removed", `Document supprimé: ${attachment.name}`);
+
+    logger.log(`✅ ${attachment.name} removed successfully`);
+  } catch (error) {
+    logger.error("❌ Failed to remove attachment:", error);
+    alert("Erreur lors de la suppression du fichier");
+  }
+};
+
+const handleDragOver = (event) => {
+  event.preventDefault();
+  isDragging.value = true;
+};
+
+const handleDragLeave = (event) => {
+  event.preventDefault();
+  isDragging.value = false;
 };
 
 const handleDuplicate = () => {
@@ -421,6 +658,7 @@ const getActivityIcon = (activityType) => {
   const iconMap = {
     comment_added: "edit",
     attachment_added: "upload",
+    attachment_removed: "trash",
     ticket_updated: "edit",
     ticket_created: "plus",
     status_changed: "check-circle",
@@ -451,7 +689,7 @@ watch(
       form.value.customer = newTicket.customer || "";
       form.value.description = newTicket.description || "";
       form.value.priority = newTicket.priority || "medium";
-      form.value.type = newTicket.type || "call";
+      form.value.type = normalizeType(newTicket.type || "task");
       form.value.status = newTicket.status || "todo";
       form.value.dueDate = newTicket.dueDate || "";
     }
@@ -999,5 +1237,195 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .btn-primary:hover {
   background: #2563eb;
+}
+
+/* Upload Zone */
+.upload-zone {
+  border: 2px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  margin-bottom: var(--space-6);
+  background: var(--bg-tertiary);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.upload-zone:hover {
+  border-color: var(--electric-blue);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.upload-zone-dragging {
+  border-color: var(--electric-blue);
+  background: rgba(59, 130, 246, 0.1);
+  border-style: solid;
+}
+
+.upload-zone-uploading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--electric-blue);
+  margin-bottom: var(--space-2);
+}
+
+.upload-text {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.upload-link {
+  color: var(--electric-blue);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.upload-progress-container {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.upload-progress-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.upload-progress-name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  min-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: var(--electric-blue);
+  transition: width 0.3s ease;
+}
+
+.upload-progress-percent {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Attachment Delete Button */
+.attachment-delete-btn {
+  color: var(--accent-red);
+}
+
+.attachment-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Comment Input */
+.comment-input-container {
+  margin-bottom: var(--space-6);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.comment-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.comment-input:focus {
+  outline: none;
+}
+
+.comment-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.comment-input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-primary);
+}
+
+.comment-hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.btn-submit-comment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--electric-blue);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-submit-comment:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-submit-comment:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-submit-comment svg {
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>

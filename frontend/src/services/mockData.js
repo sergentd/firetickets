@@ -236,6 +236,13 @@ export const mockTickets = [
 // In-memory storage for development
 let tickets = [...mockTickets];
 
+// Observer pattern for mock subscriptions
+let subscribers = [];
+
+const notifySubscribers = () => {
+  subscribers.forEach(callback => callback([...tickets]));
+};
+
 export const getMockTickets = () => {
   return Promise.resolve([...tickets]);
 };
@@ -259,6 +266,10 @@ export const createMockTicket = (ticketData) => {
     ],
   };
   tickets.push(newTicket);
+
+  // Notify all subscribers of the change
+  notifySubscribers();
+
   return Promise.resolve(newTicket.id);
 };
 
@@ -270,19 +281,105 @@ export const updateMockTicket = (id, updates) => {
       ...updates,
       updatedAt: new Date().toISOString(),
     };
+
+    // Notify all subscribers of the change
+    notifySubscribers();
   }
   return Promise.resolve();
 };
 
 export const deleteMockTicket = (id) => {
   tickets = tickets.filter((t) => t.id !== id);
+
+  // Notify all subscribers of the change
+  notifySubscribers();
+
   return Promise.resolve();
 };
 
 export const subscribeMockTickets = (callback) => {
+  // Add callback to subscribers list
+  subscribers.push(callback);
+
   // Immediately call callback with current tickets
   callback([...tickets]);
 
-  // Return unsubscribe function (does nothing in mock mode)
-  return () => {};
+  // Return unsubscribe function that removes this callback
+  return () => {
+    subscribers = subscribers.filter(cb => cb !== callback);
+  };
+};
+
+export const addMockComment = (ticketId, commentText) => {
+  const index = tickets.findIndex((t) => t.id === ticketId);
+  if (index !== -1) {
+    const newComment = {
+      id: `com-${Date.now()}`,
+      text: commentText,
+      userEmail: mockUser.email,
+      createdAt: new Date().toISOString(),
+    };
+
+    tickets[index].comments = tickets[index].comments || [];
+    tickets[index].comments.push(newComment);
+    tickets[index].updatedAt = new Date().toISOString();
+
+    // Notify all subscribers of the change
+    notifySubscribers();
+
+    return Promise.resolve(newComment);
+  }
+  return Promise.reject(new Error("Ticket not found"));
+};
+
+export const addMockActivity = (ticketId, activityType, description) => {
+  const index = tickets.findIndex((t) => t.id === ticketId);
+  if (index !== -1) {
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: activityType,
+      description: description,
+      timestamp: new Date().toISOString(),
+    };
+
+    tickets[index].activities = tickets[index].activities || [];
+    tickets[index].activities.push(newActivity);
+
+    // Notify all subscribers of the change
+    notifySubscribers();
+
+    return Promise.resolve(newActivity);
+  }
+  return Promise.reject(new Error("Ticket not found"));
+};
+
+export const addMockAttachment = (ticketId, attachment) => {
+  const index = tickets.findIndex((t) => t.id === ticketId);
+  if (index !== -1) {
+    tickets[index].attachments = tickets[index].attachments || [];
+    tickets[index].attachments.push(attachment);
+    tickets[index].updatedAt = new Date().toISOString();
+
+    // Notify all subscribers of the change
+    notifySubscribers();
+
+    return Promise.resolve(attachment);
+  }
+  return Promise.reject(new Error("Ticket not found"));
+};
+
+export const removeMockAttachment = (ticketId, attachmentId) => {
+  const index = tickets.findIndex((t) => t.id === ticketId);
+  if (index !== -1) {
+    tickets[index].attachments = (tickets[index].attachments || []).filter(
+      att => att.id !== attachmentId
+    );
+    tickets[index].updatedAt = new Date().toISOString();
+
+    // Notify all subscribers of the change
+    notifySubscribers();
+
+    return Promise.resolve();
+  }
+  return Promise.reject(new Error("Ticket not found"));
 };

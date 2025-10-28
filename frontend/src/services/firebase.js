@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import logger from "@/utils/logger";
 
 const firebaseConfig = {
@@ -38,4 +39,8 @@ logger.log("🔥 FIREBASE: App initialized successfully");
 const db = getFirestore(app);
 logger.log("🔥 FIRESTORE: Database initialized successfully");
 
-export { app, db };
+// Initialize Storage
+const storage = getStorage(app);
+logger.log("🔥 STORAGE: Storage initialized successfully");
+
+export { app, db, storage };

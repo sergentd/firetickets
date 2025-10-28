@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   onSnapshot,
   query,
   where,
@@ -21,6 +22,10 @@ import {
   updateMockTicket,
   deleteMockTicket,
   subscribeMockTickets,
+  addMockComment,
+  addMockActivity,
+  addMockAttachment,
+  removeMockAttachment,
 } from "./mockData";
 
 const COLLECTION_NAME = "tickets";
@@ -228,6 +233,167 @@ export const updateTicket = async (ticketId, updates) => {
     logger.log(`🔥 FIRESTORE: Ticket ${ticketId} updated successfully`);
   } catch (error) {
     logger.error("Error updating ticket:", error);
+    throw error;
+  }
+};
+
+/**
+ * Add a comment to a ticket
+ * Cost: 1 write operation
+ */
+export const addComment = async (ticketId, commentText) => {
+  // DEV MODE: Use mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Adding mock comment to ticket ${ticketId}...`);
+    const newComment = await addMockComment(ticketId, commentText);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock comment added successfully`);
+    return newComment;
+  }
+
+  try {
+    const userId = auth.currentUser?.uid;
+    const userEmail = auth.currentUser?.email;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    logger.log(`🔥 FIRESTORE: Adding comment to ticket ${ticketId}...`);
+
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
+    const newComment = {
+      id: `com-${Date.now()}`,
+      text: commentText,
+      userEmail: userEmail,
+      createdAt: new Date().toISOString(),
+    };
+
+    await updateDoc(ticketRef, {
+      comments: [...(await getTicketComments(ticketId)), newComment],
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.log(`🔥 FIRESTORE: Comment added successfully`);
+    return newComment;
+  } catch (error) {
+    logger.error("Error adding comment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Helper to get existing comments
+ */
+const getTicketComments = async (ticketId) => {
+  const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
+  const ticketSnap = await getDoc(ticketRef);
+  if (ticketSnap.exists()) {
+    return ticketSnap.data().comments || [];
+  }
+  return [];
+};
+
+/**
+ * Add an activity entry to a ticket
+ * Cost: 1 write operation (merged with other updates)
+ */
+export const addActivity = async (ticketId, activityType, description) => {
+  // DEV MODE: Use mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Adding mock activity to ticket ${ticketId}...`);
+    const newActivity = await addMockActivity(ticketId, activityType, description);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock activity added successfully`);
+    return newActivity;
+  }
+
+  try {
+    logger.log(`🔥 FIRESTORE: Adding activity to ticket ${ticketId}...`);
+
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: activityType,
+      description: description,
+      timestamp: new Date().toISOString(),
+    };
+
+    const ticketSnap = await getDoc(ticketRef);
+    const currentActivities = ticketSnap.exists() ? (ticketSnap.data().activities || []) : [];
+
+    await updateDoc(ticketRef, {
+      activities: [...currentActivities, newActivity],
+    });
+
+    logger.log(`🔥 FIRESTORE: Activity added successfully`);
+    return newActivity;
+  } catch (error) {
+    logger.error("Error adding activity:", error);
+    throw error;
+  }
+};
+
+/**
+ * Add an attachment to a ticket
+ * Cost: 1 write operation
+ */
+export const addAttachment = async (ticketId, attachment) => {
+  // DEV MODE: Use mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Adding mock attachment to ticket ${ticketId}...`);
+    const newAttachment = await addMockAttachment(ticketId, attachment);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock attachment added successfully`);
+    return newAttachment;
+  }
+
+  try {
+    logger.log(`🔥 FIRESTORE: Adding attachment to ticket ${ticketId}...`);
+
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
+    const ticketSnap = await getDoc(ticketRef);
+    const currentAttachments = ticketSnap.exists() ? (ticketSnap.data().attachments || []) : [];
+
+    await updateDoc(ticketRef, {
+      attachments: [...currentAttachments, attachment],
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.log(`🔥 FIRESTORE: Attachment added successfully`);
+    return attachment;
+  } catch (error) {
+    logger.error("Error adding attachment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Remove an attachment from a ticket
+ * Cost: 1 write operation
+ */
+export const removeAttachment = async (ticketId, attachmentId) => {
+  // DEV MODE: Use mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Removing mock attachment from ticket ${ticketId}...`);
+    await removeMockAttachment(ticketId, attachmentId);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock attachment removed successfully`);
+    return;
+  }
+
+  try {
+    logger.log(`🔥 FIRESTORE: Removing attachment ${attachmentId} from ticket ${ticketId}...`);
+
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
+    const ticketSnap = await getDoc(ticketRef);
+    const currentAttachments = ticketSnap.exists() ? (ticketSnap.data().attachments || []) : [];
+
+    const updatedAttachments = currentAttachments.filter(att => att.id !== attachmentId);
+
+    await updateDoc(ticketRef, {
+      attachments: updatedAttachments,
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.log(`🔥 FIRESTORE: Attachment removed successfully`);
+  } catch (error) {
+    logger.error("Error removing attachment:", error);
     throw error;
   }
 };
