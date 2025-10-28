@@ -172,8 +172,17 @@ export const createTicket = async (ticketData) => {
       "🔥 FIRESTORE: Creating ticket in Firebase...",
       ticketData.title,
     );
+
+    // Filter out undefined values - Firebase doesn't accept undefined
+    const cleanData = Object.entries(ticketData).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
     const docRef = await addDoc(getTicketsCollection(), {
-      ...ticketData,
+      ...cleanData,
       userId: userId,
       createdAt: serverTimestamp(), // Server timestamp (accurate)
       updatedAt: serverTimestamp(),
@@ -202,9 +211,18 @@ export const updateTicket = async (ticketId, updates) => {
 
   try {
     logger.log(`🔥 FIRESTORE: Updating ticket ${ticketId} in Firebase...`);
+
+    // Filter out undefined values - Firebase doesn't accept undefined
+    const cleanUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
     const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
     await updateDoc(ticketRef, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: serverTimestamp(),
     });
     logger.log(`🔥 FIRESTORE: Ticket ${ticketId} updated successfully`);

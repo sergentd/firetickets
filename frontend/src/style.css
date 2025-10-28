@@ -390,7 +390,7 @@ body::before {
 
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-accent);
+  border: 1px solid var(--electric-blue-darker);
 }
 
 .hover-glow:hover {
@@ -670,7 +670,7 @@ body::before {
 }
 
 .glass-card-rounded {
-  border-radius: var(--radius-sm); /* 4px - much smaller rounded corners */
+  border-radius: var(--radius-md);
 }
 
 .glass-button {
