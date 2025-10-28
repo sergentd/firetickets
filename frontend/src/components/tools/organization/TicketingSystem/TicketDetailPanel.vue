@@ -216,15 +216,25 @@
         </div>
         <div v-else class="attachments-list">
           <div v-for="attachment in attachments" :key="attachment.id" class="attachment-item">
-            <div class="attachment-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
+            <!-- Image preview or file icon -->
+            <div class="attachment-preview">
+              <img
+                v-if="isImage(attachment.type)"
+                :src="attachment.url"
+                :alt="attachment.name"
+                class="attachment-thumbnail"
+                @error="$event.target.style.display = 'none'"
+              />
+              <div v-else class="attachment-icon">
+                <IconSystem :name="getFileIcon(attachment.name, attachment.type)" size="lg" />
+              </div>
             </div>
+
             <div class="attachment-info">
               <p class="attachment-name">{{ attachment.name }}</p>
               <p class="attachment-meta">{{ formatFileSize(attachment.size) }} • {{ formatDate(attachment.uploadedAt) }}</p>
             </div>
+
             <div class="attachment-actions">
               <button
                 v-if="isPreviewable(attachment.type)"
@@ -232,24 +242,17 @@
                 class="attachment-action-btn"
                 title="Prévisualiser"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+                <IconSystem name="eye" size="sm" />
               </button>
               <a :href="attachment.url" download :title="'Télécharger ' + attachment.name" class="attachment-action-btn">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+                <IconSystem name="download" size="sm" />
               </a>
               <button
                 @click="handleRemoveAttachment(attachment)"
                 class="attachment-action-btn attachment-delete-btn"
                 title="Supprimer"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <IconSystem name="trash" size="sm" />
               </button>
             </div>
           </div>
@@ -619,9 +622,14 @@ const handleRemoveAttachment = async (attachment) => {
   }
 
   try {
-    // Delete from Firebase Storage
-    if (attachment.storagePath) {
-      await deleteAttachment(attachment.storagePath);
+    // Delete from Firebase Storage (only if we have a valid storagePath)
+    if (attachment.storagePath && !attachment.storagePath.startsWith('http')) {
+      try {
+        await deleteAttachment(attachment.storagePath);
+      } catch (storageError) {
+        logger.warn("⚠️ Could not delete from storage (file may not exist):", storageError);
+        // Continue anyway to remove from Firestore
+      }
     }
 
     // Remove from Firestore ticket
@@ -679,7 +687,47 @@ const getActivityIcon = (activityType) => {
   return iconMap[activityType] || iconMap.default;
 };
 
-// Attachment preview methods
+// Attachment helper methods
+const getFileIcon = (fileName, fileType) => {
+  // Get file extension
+  const extension = fileName.split('.').pop()?.toLowerCase();
+
+  // Check by mime type first
+  if (fileType) {
+    if (fileType.startsWith('image/')) return 'image';
+    if (fileType.startsWith('video/')) return 'video';
+    if (fileType.startsWith('audio/')) return 'music';
+    if (fileType.includes('pdf')) return 'file-text';
+    if (fileType.includes('word') || fileType.includes('document')) return 'file-text';
+    if (fileType.includes('sheet') || fileType.includes('excel')) return 'table';
+    if (fileType.includes('presentation') || fileType.includes('powerpoint')) return 'presentation';
+    if (fileType.includes('zip') || fileType.includes('compressed')) return 'archive';
+  }
+
+  // Fallback to extension
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi'];
+  const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'm4a'];
+  const docExts = ['doc', 'docx', 'txt', 'rtf', 'odt'];
+  const sheetExts = ['xls', 'xlsx', 'csv', 'ods'];
+  const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
+
+  if (imageExts.includes(extension)) return 'image';
+  if (videoExts.includes(extension)) return 'video';
+  if (audioExts.includes(extension)) return 'music';
+  if (extension === 'pdf') return 'file-text';
+  if (docExts.includes(extension)) return 'file-text';
+  if (sheetExts.includes(extension)) return 'table';
+  if (archiveExts.includes(extension)) return 'archive';
+  if (extension === 'code' || ['js', 'ts', 'jsx', 'tsx', 'vue', 'html', 'css', 'json'].includes(extension)) return 'code';
+
+  return 'paperclip';
+};
+
+const isImage = (fileType) => {
+  return fileType?.startsWith('image/');
+};
+
 const isPreviewable = (fileType) => {
   const previewableTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/svg+xml", "application/pdf"];
   return previewableTypes.includes(fileType?.toLowerCase());
@@ -1044,10 +1092,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
+  transition: all 0.2s;
+}
+
+.attachment-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--electric-blue);
+}
+
+.attachment-preview {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.attachment-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-md);
 }
 
 .attachment-icon {
-  color: var(--text-tertiary);
+  color: var(--electric-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .attachment-info {

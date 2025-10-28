@@ -36,7 +36,7 @@ export const mockTickets = [
         name: "logo-entreprise.png",
         type: "image/png",
         size: 89432,
-        url: "https://via.placeholder.com/400x300.png?text=Logo+Entreprise",
+        url: "https://placehold.co/600x400?text=Hello+World",
         uploadedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
       },
     ],

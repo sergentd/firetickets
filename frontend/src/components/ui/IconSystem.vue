@@ -985,6 +985,169 @@
       />
     </g>
 
+    <!-- Download Icon -->
+    <g v-else-if="name === 'download'">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+        stroke="currentColor"
+        fill="none"
+      />
+    </g>
+
+    <!-- Image/Photo Icon -->
+    <g v-else-if="name === 'image' || name === 'photo'">
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="2"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+      <circle cx="8.5" cy="8.5" r="1.5" :fill="primaryColor" />
+      <path
+        d="M21 15l-5-5L5 21"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </g>
+
+    <!-- Video Icon -->
+    <g v-else-if="name === 'video'">
+      <path
+        d="M23 7l-7 5 7 5V7z"
+        :fill="primaryColor"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <rect
+        x="1"
+        y="5"
+        width="15"
+        height="14"
+        rx="2"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+    </g>
+
+    <!-- Music/Audio Icon -->
+    <g v-else-if="name === 'music' || name === 'audio'">
+      <path
+        d="M9 18V5l12-2v13"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <circle cx="6" cy="18" r="3" :fill="primaryColor" stroke="currentColor" stroke-width="2" />
+      <circle cx="18" cy="16" r="3" :fill="accentColor" stroke="currentColor" stroke-width="2" />
+    </g>
+
+    <!-- File Text Icon -->
+    <g v-else-if="name === 'file-text'">
+      <path
+        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+      <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" fill="none" />
+      <path
+        d="M16 13H8M16 17H8M10 9H8"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      />
+    </g>
+
+    <!-- Table/Spreadsheet Icon -->
+    <g v-else-if="name === 'table' || name === 'spreadsheet'">
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="2"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+      <path d="M3 9h18M3 15h18M12 3v18" stroke="currentColor" stroke-width="2" />
+    </g>
+
+    <!-- Presentation Icon -->
+    <g v-else-if="name === 'presentation'">
+      <rect
+        x="2"
+        y="3"
+        width="20"
+        height="14"
+        rx="2"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+      <path d="M8 21l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M12 17v4" stroke="currentColor" stroke-width="2" />
+      <path d="M8 7l3 3 3-3" :stroke="primaryColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <!-- Archive/Zip Icon -->
+    <g v-else-if="name === 'archive' || name === 'zip'">
+      <path
+        d="M21 8v13H3V8"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M1 3h22v5H1z"
+        :fill="primaryColor"
+        stroke="currentColor"
+        stroke-width="2"
+      />
+      <path d="M10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </g>
+
+    <!-- Code Icon -->
+    <g v-else-if="name === 'code'">
+      <path
+        d="M16 18l6-6-6-6M8 6l-6 6 6 6"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </g>
+
+    <!-- Paperclip/Attachment Icon -->
+    <g v-else-if="name === 'paperclip' || name === 'attachment'">
+      <path
+        d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </g>
+
     <!-- Default fallback -->
     <g v-else>
       <rect
