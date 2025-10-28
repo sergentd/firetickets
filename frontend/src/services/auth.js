@@ -6,18 +6,32 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import logger from "@/utils/logger";
+import { mockUser } from "./mockData";
 
-const auth = getAuth(app);
+const isDevMode = import.meta.env.VITE_DEV_MODE === "true";
+const auth = isDevMode ? null : getAuth(app);
+
+// Mock auth state for dev mode
+let mockAuthUser = null;
 
 /**
  * Firebase Authentication Service
  * Single-user authentication for personal ticketing system
+ *
+ * DEV MODE: Set VITE_DEV_MODE=true in .env.local to bypass Firebase auth
  */
 
 /**
  * Sign in with email and password
  */
 export const loginWithEmail = async (email, password) => {
+  // DEV MODE: Auto-login with mock user
+  if (isDevMode) {
+    logger.log("🔐 AUTH [DEV MODE]: Auto-login with mock user");
+    mockAuthUser = mockUser;
+    return mockUser;
+  }
+
   try {
     logger.log("🔐 AUTH: Attempting sign in...");
     logger.log("🔐 AUTH: Email:", email);
@@ -46,6 +60,13 @@ export const loginWithEmail = async (email, password) => {
  * Sign out current user
  */
 export const logout = async () => {
+  // DEV MODE: Clear mock user
+  if (isDevMode) {
+    logger.log("🔐 AUTH [DEV MODE]: Logout (clearing mock user)");
+    mockAuthUser = null;
+    return;
+  }
+
   try {
     logger.log("🔐 AUTH: Signing out...");
     await signOut(auth);
@@ -60,6 +81,10 @@ export const logout = async () => {
  * Get current authenticated user
  */
 export const getCurrentUser = () => {
+  // DEV MODE: Return mock user
+  if (isDevMode) {
+    return mockAuthUser;
+  }
   return auth.currentUser;
 };
 
@@ -68,6 +93,14 @@ export const getCurrentUser = () => {
  * Returns unsubscribe function
  */
 export const onAuthChange = (callback) => {
+  // DEV MODE: Immediately call with mock user and return no-op unsubscribe
+  if (isDevMode) {
+    logger.log("🔐 AUTH [DEV MODE]: Auto-authenticated with mock user");
+    mockAuthUser = mockUser;
+    setTimeout(() => callback(mockUser), 0);
+    return () => {};
+  }
+
   return onAuthStateChanged(auth, (user) => {
     logger.log("🔐 AUTH: Auth state changed:", user ? user.email : "No user");
     callback(user);

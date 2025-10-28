@@ -1,5 +1,6 @@
 import { db } from "./firebase";
 import { auth } from "./auth";
+import logger from "@/utils/logger";
 import {
   collection,
   doc,
@@ -14,12 +15,22 @@ import {
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
+import {
+  getMockTickets,
+  createMockTicket,
+  updateMockTicket,
+  deleteMockTicket,
+  subscribeMockTickets,
+} from "./mockData";
 
 const COLLECTION_NAME = "tickets";
+const isDevMode = import.meta.env.VITE_DEV_MODE === "true";
 
 /**
  * Firestore Ticket Service
  * Cost-conscious implementation with minimal reads/writes
+ *
+ * DEV MODE: Set VITE_DEV_MODE=true in .env.local to use mock data
  */
 
 // Get tickets collection reference
@@ -30,14 +41,22 @@ const getTicketsCollection = () => collection(db, COLLECTION_NAME);
  * Returns: Promise<Array<Ticket>>
  */
 export const loadTickets = async () => {
+  // DEV MODE: Return mock data
+  if (isDevMode) {
+    logger.log("🔥 FIRESTORE [DEV MODE]: Loading mock tickets...");
+    const tickets = await getMockTickets();
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Loaded ${tickets.length} mock tickets`);
+    return tickets;
+  }
+
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       throw new Error("User not authenticated");
     }
 
-    console.log("🔥 FIRESTORE: Loading tickets from Firebase Firestore...");
-    console.log("🔥 FIRESTORE: Filtering by userId:", userId);
+    logger.log("🔥 FIRESTORE: Loading tickets from Firebase Firestore...");
+    logger.log("🔥 FIRESTORE: Filtering by userId:", userId);
 
     const q = query(
       getTicketsCollection(),
@@ -45,7 +64,7 @@ export const loadTickets = async () => {
       orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
-    console.log(
+    logger.log(
       `🔥 FIRESTORE: Loaded ${snapshot.docs.length} tickets from Firebase`,
     );
 
@@ -63,7 +82,7 @@ export const loadTickets = async () => {
         doc.data().completedAt,
     }));
   } catch (error) {
-    console.error("Error loading tickets:", error);
+    logger.error("Error loading tickets:", error);
     throw error;
   }
 };
@@ -73,14 +92,20 @@ export const loadTickets = async () => {
  * Returns: Unsubscribe function
  */
 export const subscribeToTickets = (callback) => {
+  // DEV MODE: Use mock subscription
+  if (isDevMode) {
+    logger.log("🔥 FIRESTORE [DEV MODE]: Real-time listener activated (mock mode)");
+    return subscribeMockTickets(callback);
+  }
+
   const userId = auth.currentUser?.uid;
   if (!userId) {
-    console.error("🔥 FIRESTORE: Cannot subscribe - user not authenticated");
+    logger.error("🔥 FIRESTORE: Cannot subscribe - user not authenticated");
     return () => {}; // Return empty unsubscribe function
   }
 
-  console.log("🔥 FIRESTORE: Real-time listener activated - listening for changes...");
-  console.log("🔥 FIRESTORE: Filtering by userId:", userId);
+  logger.log("🔥 FIRESTORE: Real-time listener activated - listening for changes...");
+  logger.log("🔥 FIRESTORE: Filtering by userId:", userId);
 
   const q = query(
     getTicketsCollection(),
@@ -91,10 +116,10 @@ export const subscribeToTickets = (callback) => {
   return onSnapshot(
     q,
     (snapshot) => {
-      console.log(
+      logger.log(
         `🔥 FIRESTORE: Real-time update received! ${snapshot.docs.length} tickets`,
       );
-      console.log("🔥 FIRESTORE: Changes:", {
+      logger.log("🔥 FIRESTORE: Changes:", {
         added: snapshot.docChanges().filter((c) => c.type === "added").length,
         modified: snapshot.docChanges().filter((c) => c.type === "modified")
           .length,
@@ -119,7 +144,7 @@ export const subscribeToTickets = (callback) => {
       callback(tickets);
     },
     (error) => {
-      console.error("Error in tickets subscription:", error);
+      logger.error("Error in tickets subscription:", error);
     },
   );
 };
@@ -129,13 +154,21 @@ export const subscribeToTickets = (callback) => {
  * Cost: 1 write operation
  */
 export const createTicket = async (ticketData) => {
+  // DEV MODE: Use mock data
+  if (isDevMode) {
+    logger.log("🔥 FIRESTORE [DEV MODE]: Creating mock ticket...", ticketData.title);
+    const newId = await createMockTicket(ticketData);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock ticket created with ID: ${newId}`);
+    return { id: newId, ...ticketData, userId: "dev-user-123" };
+  }
+
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       throw new Error("User not authenticated");
     }
 
-    console.log(
+    logger.log(
       "🔥 FIRESTORE: Creating ticket in Firebase...",
       ticketData.title,
     );
@@ -145,11 +178,11 @@ export const createTicket = async (ticketData) => {
       createdAt: serverTimestamp(), // Server timestamp (accurate)
       updatedAt: serverTimestamp(),
     });
-    console.log(`🔥 FIRESTORE: Ticket created with ID: ${docRef.id}`);
+    logger.log(`🔥 FIRESTORE: Ticket created with ID: ${docRef.id}`);
 
     return { id: docRef.id, ...ticketData, userId };
   } catch (error) {
-    console.error("Error creating ticket:", error);
+    logger.error("Error creating ticket:", error);
     throw error;
   }
 };
@@ -159,16 +192,24 @@ export const createTicket = async (ticketData) => {
  * Cost: 1 write operation
  */
 export const updateTicket = async (ticketId, updates) => {
+  // DEV MODE: Update mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Updating mock ticket ${ticketId}...`);
+    await updateMockTicket(ticketId, updates);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock ticket ${ticketId} updated successfully`);
+    return;
+  }
+
   try {
-    console.log(`🔥 FIRESTORE: Updating ticket ${ticketId} in Firebase...`);
-    const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+    logger.log(`🔥 FIRESTORE: Updating ticket ${ticketId} in Firebase...`);
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
     await updateDoc(ticketRef, {
       ...updates,
       updatedAt: serverTimestamp(),
     });
-    console.log(`🔥 FIRESTORE: Ticket ${ticketId} updated successfully`);
+    logger.log(`🔥 FIRESTORE: Ticket ${ticketId} updated successfully`);
   } catch (error) {
-    console.error("Error updating ticket:", error);
+    logger.error("Error updating ticket:", error);
     throw error;
   }
 };
@@ -178,13 +219,21 @@ export const updateTicket = async (ticketId, updates) => {
  * Cost: 1 write operation
  */
 export const deleteTicket = async (ticketId) => {
+  // DEV MODE: Delete mock data
+  if (isDevMode) {
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Deleting mock ticket ${ticketId}...`);
+    await deleteMockTicket(ticketId);
+    logger.log(`🔥 FIRESTORE [DEV MODE]: Mock ticket ${ticketId} deleted successfully`);
+    return;
+  }
+
   try {
-    console.log(`🔥 FIRESTORE: Deleting ticket ${ticketId} from Firebase...`);
-    const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+    logger.log(`🔥 FIRESTORE: Deleting ticket ${ticketId} from Firebase...`);
+    const ticketRef = doc(db, COLLECTION_NAME, String(ticketId));
     await deleteDoc(ticketRef);
-    console.log(`🔥 FIRESTORE: Ticket ${ticketId} deleted successfully`);
+    logger.log(`🔥 FIRESTORE: Ticket ${ticketId} deleted successfully`);
   } catch (error) {
-    console.error("Error deleting ticket:", error);
+    logger.error("Error deleting ticket:", error);
     throw error;
   }
 };
@@ -198,7 +247,7 @@ export const bulkDeleteTickets = async (ticketIds) => {
     const deletePromises = ticketIds.map((id) => deleteTicket(id));
     await Promise.all(deletePromises);
   } catch (error) {
-    console.error("Error bulk deleting tickets:", error);
+    logger.error("Error bulk deleting tickets:", error);
     throw error;
   }
 };
@@ -211,12 +260,12 @@ export const migrateFromLocalStorage = async () => {
   try {
     const localData = localStorage.getItem("ui-tools-tickets");
     if (!localData) {
-      console.log("No localStorage data to migrate");
+      logger.log("No localStorage data to migrate");
       return { success: true, count: 0 };
     }
 
     const tickets = JSON.parse(localData);
-    console.log(`Migrating ${tickets.length} tickets from localStorage...`);
+    logger.log(`Migrating ${tickets.length} tickets from localStorage...`);
 
     const migrationPromises = tickets.map((ticket) =>
       addDoc(getTicketsCollection(), {
@@ -235,7 +284,7 @@ export const migrateFromLocalStorage = async () => {
     );
 
     await Promise.all(migrationPromises);
-    console.log(
+    logger.log(
       `✅ Successfully migrated ${tickets.length} tickets to Firestore`,
     );
 
@@ -244,7 +293,7 @@ export const migrateFromLocalStorage = async () => {
 
     return { success: true, count: tickets.length };
   } catch (error) {
-    console.error("Error migrating tickets:", error);
+    logger.error("Error migrating tickets:", error);
     throw error;
   }
 };

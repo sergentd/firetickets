@@ -1,10 +1,11 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col">
     <!-- Global Search Modal -->
-    <GlobalSearch ref="globalSearch" />
+    <GlobalSearch v-if="isAuthenticated" ref="globalSearch" />
 
-    <!-- Global Header -->
+    <!-- Global Header (only show when authenticated) -->
     <AppHeader
+      v-if="isAuthenticated"
       @toggle-favorites="handleToggleFavorites"
       @toggle-theme="handleToggleTheme"
       @open-search="openSearch"
@@ -15,8 +16,9 @@
       <router-view />
     </main>
 
-    <!-- Global Footer -->
+    <!-- Global Footer (only show when authenticated) -->
     <AppFooter
+      v-if="isAuthenticated"
       :tools-count="catalogStore?.toolCount || 0"
       :categories-count="Object.keys(catalogStore?.categories || {}).length"
       :version="appVersion"
@@ -68,8 +70,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useCatalogStore } from "@/stores/catalog";
+import { onAuthChange } from "@/services/auth";
 
 // Components
 import AppHeader from "@/components/ui/AppHeader.vue";
@@ -83,6 +86,21 @@ const catalogStore = useCatalogStore();
 const appVersion = ref("1.0.0");
 const showAboutModal = ref(false);
 const globalSearch = ref(null);
+const isAuthenticated = ref(false);
+let unsubscribeAuth = null;
+
+// Listen to authentication state changes
+onMounted(() => {
+  unsubscribeAuth = onAuthChange((user) => {
+    isAuthenticated.value = !!user;
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAuth) {
+    unsubscribeAuth();
+  }
+});
 
 // Event handlers
 const handleToggleFavorites = () => {
