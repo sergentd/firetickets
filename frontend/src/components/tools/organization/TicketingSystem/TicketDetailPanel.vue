@@ -99,7 +99,7 @@
       <div v-if="activeTab === 'details'" class="form">
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label class="form-label">Titre *</label>
+            <label class="form-label">Titre <span class="required-star">*</span></label>
             <input
               v-model="form.title"
               type="text"
@@ -110,7 +110,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Client *</label>
+            <label class="form-label">Client <span class="required-star">*</span></label>
             <input
               v-model="form.customer"
               type="text"
@@ -190,11 +190,24 @@
               <p class="attachment-name">{{ attachment.name }}</p>
               <p class="attachment-meta">{{ formatFileSize(attachment.size) }} • {{ formatDate(attachment.uploadedAt) }}</p>
             </div>
-            <a :href="attachment.url" target="_blank" class="attachment-download">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-            </a>
+            <div class="attachment-actions">
+              <button
+                v-if="isPreviewable(attachment.type)"
+                @click="previewAttachment(attachment)"
+                class="attachment-action-btn"
+                title="Prévisualiser"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+              <a :href="attachment.url" download :title="'Télécharger ' + attachment.name" class="attachment-action-btn">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -220,18 +233,16 @@
 
       <!-- Activity Tab -->
       <div v-if="activeTab === 'activity'" class="tab-content">
-        <div v-if="activities.length === 0" class="empty-state">
+        <div v-if="sortedActivities.length === 0" class="empty-state">
           <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           <p class="empty-text">Aucune activité</p>
         </div>
         <div v-else class="activity-list">
-          <div v-for="activity in activities" :key="activity.id" class="activity-item">
+          <div v-for="activity in sortedActivities" :key="activity.id" class="activity-item">
             <div class="activity-icon">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-              </svg>
+              <IconSystem :name="getActivityIcon(activity.type)" size="sm" />
             </div>
             <div class="activity-content">
               <p class="activity-description">{{ activity.description }}</p>
@@ -252,6 +263,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import IconSystem from "@/components/ui/IconSystem.vue";
 
 const props = defineProps({
   ticket: {
@@ -266,6 +278,15 @@ const emit = defineEmits(["close", "save", "duplicate", "archive"]);
 const attachments = computed(() => props.ticket.attachments || []);
 const comments = computed(() => props.ticket.comments || []);
 const activities = computed(() => props.ticket.activities || []);
+
+// Sorted activities (most recent first)
+const sortedActivities = computed(() => {
+  return [...activities.value].sort((a, b) => {
+    const dateA = new Date(a.timestamp);
+    const dateB = new Date(b.timestamp);
+    return dateB - dateA; // Descending order (most recent first)
+  });
+});
 
 // Tabs
 const tabs = computed(() => [
@@ -389,6 +410,32 @@ const handleShare = () => {
 
 const handleArchive = () => {
   emit("archive", props.ticket);
+};
+
+// Activity icon mapping
+const getActivityIcon = (activityType) => {
+  const iconMap = {
+    comment_added: "edit",
+    attachment_added: "upload",
+    ticket_updated: "edit",
+    ticket_created: "plus",
+    status_changed: "check-circle",
+    priority_changed: "alert",
+    assigned: "user",
+    default: "clock",
+  };
+  return iconMap[activityType] || iconMap.default;
+};
+
+// Attachment preview methods
+const isPreviewable = (fileType) => {
+  const previewableTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/svg+xml", "application/pdf"];
+  return previewableTypes.includes(fileType?.toLowerCase());
+};
+
+const previewAttachment = (attachment) => {
+  // Open attachment in new window/tab for preview
+  window.open(attachment.url, "_blank", "noopener,noreferrer");
 };
 
 // Populate form when ticket changes
@@ -609,13 +656,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: 6px;
+  padding: 12px 16px;
   color: var(--text-tertiary);
   transition: all 0.2s;
   border-bottom: 2px solid transparent;
   position: relative;
-  font-size: var(--text-sm);
+  font-size: 13px;
 }
 
 .tab:hover {
@@ -629,8 +676,8 @@ onUnmounted(() => {
 }
 
 .tab-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .tab-label {
@@ -684,6 +731,11 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-2);
+}
+
+.required-star {
+  color: var(--accent-red);
+  margin-left: 2px;
 }
 
 .form-input,
@@ -763,6 +815,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   margin-top: 2px;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.attachment-action-btn {
+  color: var(--electric-blue);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachment-action-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .attachment-download {
