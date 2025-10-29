@@ -25,6 +25,13 @@ if (import.meta.env.DEV) {
   window.__migration = MigrationService;
 }
 
+// ALWAYS make cleanup functions available (for production fixes)
+import('./services/cleanupTickets').then((module) => {
+  window.deleteOldTickets = module.deleteOldTickets;
+  window.deleteAllTickets = module.deleteAllTickets;
+  logger.log('🧹 Cleanup functions available: deleteOldTickets(hours), deleteAllTickets()');
+});
+
 // Migrate data from localStorage before mounting
 logger.log("🔄 Checking for data migration...");
 
