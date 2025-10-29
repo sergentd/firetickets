@@ -16,11 +16,11 @@
           <div class="status-value">{{ statusData.total }}</div>
         </div>
         <div class="status-item success">
-          <div class="status-label">New Structure</div>
+          <div class="status-label">Recent Tickets (< 24h)</div>
           <div class="status-value">{{ statusData.newStructure }}</div>
         </div>
         <div class="status-item warning">
-          <div class="status-label">Old Structure</div>
+          <div class="status-label">Old Tickets (to recreate)</div>
           <div class="status-value">{{ statusData.oldStructure }}</div>
         </div>
       </div>
@@ -59,7 +59,7 @@
       </div>
 
       <p class="help-text" v-if="statusData && statusData.oldStructure === 0">
-        ✅ All tickets already have the new structure!
+        ✅ No old tickets to recreate (all tickets are recent)!
       </p>
     </div>
 

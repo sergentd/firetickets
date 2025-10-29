@@ -48,27 +48,33 @@ export const recreateUserTickets = async () => {
     const errors = [];
     const recreatedTickets = [];
 
+    // Define cutoff: tickets created in last 24 hours are considered "new" and will be skipped
+    const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
     // Process each ticket
     for (const ticketDoc of snapshot.docs) {
       try {
         const ticketData = ticketDoc.data();
         const oldTicketId = ticketDoc.id;
 
-        // Check if ticket has the new structure (skip if already new)
-        const hasNewStructure =
-          Array.isArray(ticketData.comments) &&
-          Array.isArray(ticketData.activities) &&
-          Array.isArray(ticketData.attachments);
+        // Get creation date
+        let createdAt;
+        if (ticketData.createdAt?.toDate) {
+          createdAt = ticketData.createdAt.toDate();
+        } else if (ticketData.createdAt) {
+          createdAt = new Date(ticketData.createdAt);
+        } else {
+          createdAt = new Date(0); // Very old if no date
+        }
 
-        if (hasNewStructure && ticketData.comments.length === 0 &&
-            ticketData.activities.length === 0 &&
-            ticketData.attachments.length === 0) {
+        // Skip tickets created in last 24 hours (these are new and working)
+        if (createdAt > cutoffDate) {
           skippedCount++;
-          logger.log(`⏭️  RECREATION: Skipping ticket ${oldTicketId} - already has new structure`);
+          logger.log(`⏭️  RECREATION: Skipping ticket ${oldTicketId} - created recently (${createdAt.toISOString()})`);
           continue;
         }
 
-        logger.log(`🔄 RECREATION: Recreating ticket ${oldTicketId}...`);
+        logger.log(`🔄 RECREATION: Recreating ticket ${oldTicketId} (created: ${createdAt.toISOString()})...`);
 
         // Create new ticket with fresh structure
         const newTicketData = {
@@ -199,7 +205,7 @@ export const deleteOldTickets = async (oldTicketIds) => {
 };
 
 /**
- * Check ticket structures
+ * Check ticket structures (by date - tickets older than 24h will be recreated)
  */
 export const checkTicketStructures = async () => {
   try {
@@ -214,37 +220,40 @@ export const checkTicketStructures = async () => {
     );
     const snapshot = await getDocs(q);
 
-    let oldStructure = 0;
-    let newStructure = 0;
+    const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    let oldTickets = 0;
+    let newTickets = 0;
 
     snapshot.docs.forEach((ticketDoc) => {
       const ticketData = ticketDoc.data();
-      const hasNewStructure =
-        Array.isArray(ticketData.comments) &&
-        Array.isArray(ticketData.activities) &&
-        Array.isArray(ticketData.attachments);
 
-      if (hasNewStructure) {
-        newStructure++;
+      // Get creation date
+      let createdAt;
+      if (ticketData.createdAt?.toDate) {
+        createdAt = ticketData.createdAt.toDate();
+      } else if (ticketData.createdAt) {
+        createdAt = new Date(ticketData.createdAt);
       } else {
-        oldStructure++;
-        logger.log(`Old structure ticket ${ticketDoc.id}:`, {
-          hasComments: Array.isArray(ticketData.comments),
-          hasActivities: Array.isArray(ticketData.activities),
-          hasAttachments: Array.isArray(ticketData.attachments),
-        });
+        createdAt = new Date(0); // Very old if no date
+      }
+
+      if (createdAt > cutoffDate) {
+        newTickets++;
+      } else {
+        oldTickets++;
+        logger.log(`Old ticket ${ticketDoc.id} - created: ${createdAt.toISOString()}`);
       }
     });
 
-    logger.log(`\nStructure Check Summary:`);
+    logger.log(`\nTicket Check Summary:`);
     logger.log(`  Total tickets: ${snapshot.docs.length}`);
-    logger.log(`  ✅ New structure: ${newStructure}`);
-    logger.log(`  ⚠️  Old structure: ${oldStructure}`);
+    logger.log(`  ✅ Recent (< 24h): ${newTickets}`);
+    logger.log(`  ⚠️  Old (will be recreated): ${oldTickets}`);
 
     return {
       total: snapshot.docs.length,
-      newStructure,
-      oldStructure,
+      newStructure: newTickets,
+      oldStructure: oldTickets,
     };
   } catch (error) {
     logger.error("Error checking ticket structures:", error);
