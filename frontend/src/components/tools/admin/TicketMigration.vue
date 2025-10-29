@@ -1,9 +1,9 @@
 <template>
   <div class="migration-container">
     <div class="migration-header">
-      <h1>🔄 Ticket Structure Migration</h1>
+      <h1>🔄 Ticket Recreation</h1>
       <p class="description">
-        This tool standardizes all your tickets to include the complete structure
+        This tool recreates old tickets with the correct structure
         (comments, activities, attachments arrays).
       </p>
     </div>
@@ -16,12 +16,12 @@
           <div class="status-value">{{ statusData.total }}</div>
         </div>
         <div class="status-item success">
-          <div class="status-label">Up-to-date</div>
-          <div class="status-value">{{ statusData.upToDate }}</div>
+          <div class="status-label">New Structure</div>
+          <div class="status-value">{{ statusData.newStructure }}</div>
         </div>
         <div class="status-item warning">
-          <div class="status-label">Needs Migration</div>
-          <div class="status-value">{{ statusData.needsMigration }}</div>
+          <div class="status-label">Old Structure</div>
+          <div class="status-value">{{ statusData.oldStructure }}</div>
         </div>
       </div>
     </div>
@@ -39,17 +39,27 @@
         </button>
 
         <button
-          @click="runMigration"
-          :disabled="loading || (statusData && statusData.needsMigration === 0)"
+          @click="runRecreation"
+          :disabled="loading || (statusData && statusData.oldStructure === 0)"
           class="btn btn-primary"
         >
           <IconSystem name="refresh" />
-          {{ loading && currentAction === 'migrate' ? 'Migrating...' : 'Run Migration' }}
+          {{ loading && currentAction === 'recreate' ? 'Recreating...' : 'Recreate Old Tickets' }}
+        </button>
+
+        <button
+          v-if="recreationResult && recreationResult.recreatedTickets && recreationResult.recreatedTickets.length > 0"
+          @click="deleteOldTickets"
+          :disabled="loading"
+          class="btn btn-danger"
+        >
+          <IconSystem name="trash" />
+          {{ loading && currentAction === 'delete' ? 'Deleting...' : 'Delete Old Tickets' }}
         </button>
       </div>
 
-      <p class="help-text" v-if="statusData && statusData.needsMigration === 0">
-        ✅ All tickets are already up-to-date!
+      <p class="help-text" v-if="statusData && statusData.oldStructure === 0">
+        ✅ All tickets already have the new structure!
       </p>
     </div>
 
@@ -91,10 +101,11 @@
     <div class="info-card">
       <h2>ℹ️ Information</h2>
       <ul>
-        <li><strong>Safe Operation:</strong> This migration only adds missing arrays, it doesn't modify existing data.</li>
-        <li><strong>User Scope:</strong> Only your tickets will be migrated (filtered by your user ID).</li>
-        <li><strong>No Downtime:</strong> Your application will continue to work during migration.</li>
-        <li><strong>Idempotent:</strong> You can run this multiple times safely - already migrated tickets will be skipped.</li>
+        <li><strong>Step 1:</strong> Click "Recreate Old Tickets" to create fresh copies with correct structure.</li>
+        <li><strong>Step 2:</strong> After recreation, a "Delete Old Tickets" button will appear.</li>
+        <li><strong>Step 3:</strong> Delete old tickets to complete the process.</li>
+        <li><strong>Safe:</strong> Old tickets remain until you explicitly delete them.</li>
+        <li><strong>User Scope:</strong> Only your tickets are affected.</li>
       </ul>
     </div>
   </div>
@@ -102,7 +113,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { checkTicketStructure, migrateUserTickets } from '@/services/migrateTickets';
+import { checkTicketStructures, recreateUserTickets, deleteOldTickets as deleteOldTicketsService } from '@/services/recreateTickets';
 import { useToast } from '@/composables/useToast';
 import IconSystem from '@/components/ui/IconSystem.vue';
 
@@ -112,14 +123,16 @@ const loading = ref(false);
 const currentAction = ref(null);
 const statusData = ref(null);
 const migrationResult = ref(null);
+const recreationResult = ref(null);
 
 const checkStructure = async () => {
   loading.value = true;
   currentAction.value = 'check';
   migrationResult.value = null;
+  recreationResult.value = null;
 
   try {
-    const result = await checkTicketStructure();
+    const result = await checkTicketStructures();
     statusData.value = result;
     toast.info(`Checked ${result.total} tickets`);
   } catch (error) {
@@ -131,25 +144,66 @@ const checkStructure = async () => {
   }
 };
 
-const runMigration = async () => {
+const runRecreation = async () => {
   loading.value = true;
-  currentAction.value = 'migrate';
+  currentAction.value = 'recreate';
 
   try {
-    const result = await migrateUserTickets();
-    migrationResult.value = result;
+    const result = await recreateUserTickets();
+    recreationResult.value = result;
+    migrationResult.value = {
+      total: result.total,
+      migrated: result.recreated,
+      alreadyMigrated: result.skipped,
+      errors: result.errors,
+      success: result.success,
+    };
 
-    // Refresh status after migration
+    // Refresh status after recreation
     await checkStructure();
 
     if (result.success) {
-      toast.success(`Successfully migrated ${result.migrated} tickets!`);
+      toast.success(`Successfully recreated ${result.recreated} tickets!`);
     } else {
-      toast.warning(`Migration completed with ${result.errors.length} errors`);
+      toast.warning(`Recreation completed with ${result.errors.length} errors`);
     }
   } catch (error) {
-    console.error('Error running migration:', error);
-    toast.error('Migration failed: ' + error.message);
+    console.error('Error running recreation:', error);
+    toast.error('Recreation failed: ' + error.message);
+  } finally {
+    loading.value = false;
+    currentAction.value = null;
+  }
+};
+
+const deleteOldTickets = async () => {
+  if (!recreationResult.value || !recreationResult.value.recreatedTickets) {
+    toast.error('No old tickets to delete');
+    return;
+  }
+
+  const confirmed = confirm(`Are you sure you want to delete ${recreationResult.value.recreatedTickets.length} old tickets? This is irreversible!`);
+  if (!confirmed) {
+    return;
+  }
+
+  loading.value = true;
+  currentAction.value = 'delete';
+
+  try {
+    const oldIds = recreationResult.value.recreatedTickets.map(t => t.oldId);
+    const result = await deleteOldTicketsService(oldIds);
+
+    if (result.success) {
+      toast.success(`Successfully deleted ${result.deleted} old tickets!`);
+      recreationResult.value = null;
+      await checkStructure();
+    } else {
+      toast.warning(`Deletion completed with ${result.errors.length} errors`);
+    }
+  } catch (error) {
+    console.error('Error deleting old tickets:', error);
+    toast.error('Deletion failed: ' + error.message);
   } finally {
     loading.value = false;
     currentAction.value = null;
@@ -291,6 +345,16 @@ checkStructure();
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--bg-secondary);
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
 }
 
 .help-text {
