@@ -238,9 +238,9 @@ const categoryDisplayName = computed(() => {
   letter-spacing: -0.025em;
   text-shadow: var(--shadow-lg);
   background: linear-gradient(
-    135deg,
-    var(--text-primary) 0%,
-    var(--text-secondary) 100%
+    0deg,
+    var(--electric-blue) 40%,
+    var(--electric-blue-alpha) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

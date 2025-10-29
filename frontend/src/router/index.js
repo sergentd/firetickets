@@ -21,6 +21,7 @@ import ComponentLibrary from "../components/tools/reference/ComponentLibrary.vue
 import SkillsEvaluator from "../components/tools/evaluation/SkillsEvaluator.vue";
 import MindMapper from "../components/tools/visualization/MindMapper.vue";
 import TicketingSystem from "../components/tools/organization/TicketingSystem.vue";
+import TicketMigration from "../components/tools/admin/TicketMigration.vue";
 
 const routes = [
   {
@@ -185,6 +186,16 @@ const routes = [
     meta: {
       title: "Système de Tickets",
       category: "organization",
+      migrated: true,
+    },
+  },
+  {
+    path: "/tools/admin/ticket-migration",
+    name: "TicketMigration",
+    component: TicketMigration,
+    meta: {
+      title: "Migration de Tickets",
+      category: "admin",
       migrated: true,
     },
   },

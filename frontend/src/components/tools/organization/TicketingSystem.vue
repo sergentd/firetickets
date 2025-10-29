@@ -5,7 +5,7 @@
       <!-- Header -->
       <div class="tool-header-wrapper">
         <ToolHeader
-          title="Système de Tickets"
+          title="Firetickets"
           description="Gérez vos rappels clients et tâches personnelles de manière simple et efficace"
           icon="tag"
           category="organization"
@@ -1215,6 +1215,14 @@ onUnmounted(() => {
 /* Use same patterns as catalog and palette generator */
 .container {
   max-width: 1400px;
+}
+
+/* Firetickets gradient title */
+:deep(.tool-title) {
+  background: linear-gradient(0deg, #7a0000 0%, #d3b90d 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 /* Migration Banner */
