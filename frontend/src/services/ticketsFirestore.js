@@ -186,11 +186,20 @@ export const createTicket = async (ticketData) => {
       return acc;
     }, {});
 
+    const now = new Date().toISOString();
+    const initialActivity = {
+      id: `act-${Date.now()}`,
+      type: "ticket_created",
+      description: "Ticket créé",
+      timestamp: now,
+    };
+
     const docRef = await addDoc(getTicketsCollection(), {
       ...cleanData,
       userId: userId,
       createdAt: serverTimestamp(), // Server timestamp (accurate)
       updatedAt: serverTimestamp(),
+      activities: [initialActivity],
     });
     logger.log(`🔥 FIRESTORE: Ticket created with ID: ${docRef.id}`);
 
