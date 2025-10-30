@@ -113,7 +113,6 @@
 
 <script setup>
 import { ref } from 'vue';
-import { checkTicketStructures, recreateUserTickets, deleteOldTickets as deleteOldTicketsService } from '@/services/recreateTickets';
 import { useToast } from '@/composables/useToast';
 import IconSystem from '@/components/ui/IconSystem.vue';
 
